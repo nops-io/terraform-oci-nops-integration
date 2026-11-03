@@ -1,0 +1,77 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    # Skip running release workflow on forks
+    if: github.repository_owner == 'nops-io'
+    env:
+      ASSET_NAME: nops-oci-integration-stack.zip
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Check the tag matches VERSION
+        run: |
+          version="$(tr -d '[:space:]' < VERSION)"
+          if [ "${GITHUB_REF_NAME}" != "v${version}" ]; then
+            echo "::error::Tag ${GITHUB_REF_NAME} does not match VERSION (${version})."
+            exit 1
+          fi
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.5.7
+          terraform_wrapper: false
+
+      - name: Validate
+        run: |
+          terraform fmt -check -recursive
+          terraform init -backend=false -input=false
+          terraform validate
+          terraform -chdir=examples/basic init -backend=false -input=false
+          terraform -chdir=examples/basic validate
+
+      # Resource Manager needs the .tf files and schema.yaml at the root of the
+      # zip, with no wrapping folder.
+      - name: Build the stack zip
+        run: |
+          zip -X "${ASSET_NAME}" *.tf schema.yaml
+          unzip -l "${ASSET_NAME}"
+          if unzip -Z1 "${ASSET_NAME}" | grep -q /; then
+            echo "::error::${ASSET_NAME} must have its files at the root."
+            exit 1
+          fi
+
+      - name: Extract release notes
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          awk -v heading="## [${version}]" 'index($0, heading) == 1 { found = 1; next } found && /^## \[/ { exit } found { print }' CHANGELOG.md > release-notes.md
+          if [ ! -s release-notes.md ]; then
+            echo "::error::CHANGELOG.md has no section for ${version}."
+            exit 1
+          fi
+
+      # nOps pins each release's asset URL, so this fails rather than replacing
+      # the asset when the release already exists. Cut a new tag instead.
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${GITHUB_REF_NAME}" "${ASSET_NAME}" \
+            --repo "${GITHUB_REPOSITORY}" \
+            --title "${GITHUB_REF_NAME}" \
+            --notes-file release-notes.md \
+            --verify-tag

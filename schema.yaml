@@ -1,0 +1,71 @@
+title: "Connect Oracle Cloud to nOps"
+description: "Creates a user, a group and a root-compartment policy that let nOps read this tenancy's Oracle cost reports, and nothing else."
+informationalText: "When the apply job succeeds, copy the nOps connection code below and paste it into nOps to finish connecting."
+schemaVersion: 1.1.0
+version: "20261103"
+locale: "en"
+
+variableGroups:
+  - title: "nOps"
+    visible: true
+    variables:
+      - nops_public_key
+
+  - title: "Hidden"
+    visible: false
+    variables:
+      - tenancy_ocid
+      - region
+      - compartment_ocid
+      - current_user_ocid
+      - user_email
+      - group_name
+      - user_name
+      - policy_name
+      - config_file_profile
+
+variables:
+  nops_public_key:
+    type: string
+    title: "nOps public key"
+    description: "Paste the public key that nOps shows on the Deploy step. It is one line that starts with MII."
+    required: true
+
+outputs:
+  nops_connection_code:
+    type: copyableString
+    title: "nOps connection code"
+    description: "Copy this code and paste it into nOps to finish connecting."
+    visible: true
+
+  nops_user_ocid:
+    type: ocid
+    title: "nOps user"
+    visible: true
+
+  nops_group_name:
+    type: string
+    title: "nOps group"
+    visible: true
+
+  nops_api_key_fingerprint:
+    type: string
+    title: "nOps API key fingerprint"
+    visible: true
+
+  home_region:
+    type: string
+    title: "Home region"
+    visible: true
+
+outputGroups:
+  - title: "Connect nOps"
+    outputs:
+      - nops_connection_code
+
+  - title: "Created for nOps"
+    outputs:
+      - nops_user_ocid
+      - nops_group_name
+      - nops_api_key_fingerprint
+      - home_region

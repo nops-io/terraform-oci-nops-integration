@@ -1,0 +1,7 @@
+# Copy to terraform.tfvars and replace the values. terraform.tfvars is git-ignored.
+
+tenancy_ocid    = "ocid1.tenancy.oc1..aaaaaaaaexampleexampleexampleexampleexampleexampleexample"
+region          = "us-ashburn-1"
+nops_public_key = "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA..." # Replace with the full value nOps shows
+
+# config_file_profile = "DEFAULT"
