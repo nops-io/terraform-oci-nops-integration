@@ -17,11 +17,22 @@ locals {
   # so an unset user_email falls back to the deploying administrator's email.
   configured_email = var.user_email == null ? "" : var.user_email
   deployer_email   = try(coalesce(data.oci_identity_user.deployer[0].email, ""), "")
+  # One suffix per stack, so a new stack never clashes with resources a failed
+  # or deleted (not destroyed) stack left behind. Re-applying keeps it.
+  name_suffix = random_id.names.hex
+  group_name  = "${var.group_name}-${local.name_suffix}"
+  user_name   = "${var.user_name}-${local.name_suffix}"
+  policy_name = "${var.policy_name}-${local.name_suffix}"
+
   user_email = (
     local.configured_email != "" ? local.configured_email :
     local.deployer_email != "" ? local.deployer_email :
     null
   )
+}
+
+resource "random_id" "names" {
+  byte_length = 3
 }
 
 data "oci_identity_user" "deployer" {
@@ -33,14 +44,14 @@ data "oci_identity_user" "deployer" {
 resource "oci_identity_group" "nops" {
   provider       = oci.home
   compartment_id = var.tenancy_ocid
-  name           = var.group_name
+  name           = local.group_name
   description    = "nOps cost report access. Members can read this tenancy's Oracle cost reports and nothing else."
 }
 
 resource "oci_identity_user" "nops" {
   provider       = oci.home
   compartment_id = var.tenancy_ocid
-  name           = var.user_name
+  name           = local.user_name
   description    = "nOps cost report access. nOps signs in as this user with an API key to read this tenancy's cost reports."
   email          = local.user_email
 }
@@ -75,11 +86,14 @@ resource "oci_identity_user_capabilities_management" "nops" {
 resource "oci_identity_policy" "nops" {
   provider       = oci.home
   compartment_id = var.tenancy_ocid
-  name           = var.policy_name
-  description    = "nOps cost report access. Lets the ${var.group_name} group read this tenancy's cost reports in Oracle's usage-report tenancy."
+  name           = local.policy_name
+  description    = "nOps cost report access. Lets the ${local.group_name} group read this tenancy's cost reports in Oracle's usage-report tenancy, and list the organization it belongs to."
 
+  # inspect organizations-entity covers only ListOrganizations, which tells nOps whether this
+  # is a child tenancy: Oracle writes an organization's cost reports only in its parent.
   statements = [
     "define tenancy usage-report as ${local.usage_report_tenancy_ocid}",
     "endorse group ${oci_identity_group.nops.name} to read objects in tenancy usage-report",
+    "allow group ${oci_identity_group.nops.name} to inspect organizations-entity in tenancy",
   ]
 }

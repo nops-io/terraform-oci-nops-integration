@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.2] - 2026-11-03
+
+### Added
+
+- **Policy statement `allow group <group> to inspect organizations-entity in tenancy`.** It covers only `ListOrganizations`, so nOps can tell a child tenancy from its parent. Oracle writes an organization's cost reports only in the parent tenancy, and nOps warns when a child is connected.
+
+### Changed
+
+- **The user, group and policy names end in a random 6-character suffix** (`random_id`, chosen once per stack), for example `nops-cost-reports-reader-3f9a1c`. A new stack no longer fails with `Group with the same displayName already exists` when a failed or deleted (not destroyed) stack left resources behind. `user_name`, `group_name` and `policy_name` are now prefixes.
+- **Requires the `hashicorp/random` provider** (>= 3.1.0).
+
 ## [1.0.1] - 2026-11-03
 
 ### Fixed

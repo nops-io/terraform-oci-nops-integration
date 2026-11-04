@@ -1,15 +1,15 @@
 # OCI nOps Integration Terraform Stack
 
 This Terraform stack connects an Oracle Cloud Infrastructure (OCI) tenancy to nOps so that nOps can read the tenancy's cost reports. It automatically:
-- **Creates an IAM user** (`nops-cost-reports`) that nOps signs in as. The user can use API keys and nothing else.
+- **Creates an IAM user** (`nops-cost-reports-<suffix>`) that nOps signs in as. The user can use API keys and nothing else.
 - **Uploads the nOps public key** as that user's API key. nOps keeps the private key; you never handle it.
-- **Creates an IAM group** (`nops-cost-reports-reader`) and adds the user to it
-- **Creates a root-compartment policy** that lets the group read the tenancy's cost reports, and nothing else
+- **Creates an IAM group** (`nops-cost-reports-reader-<suffix>`) and adds the user to it
+- **Creates a root-compartment policy** that lets the group read the tenancy's cost reports and see which Oracle organization the tenancy belongs to, and nothing else
 - **Outputs a connection code** that you paste into nOps to finish connecting
 
 You paste one value (the nOps public key) and copy one value back (the connection code).
 
-[![Deploy to Oracle Cloud](https://oci-resourcemanager-plugin.plugins.oci.oraclecloud.com/latest/deploy-to-oracle-cloud.svg)](https://cloud.oracle.com/resourcemanager/stacks/create?zipUrl=https://github.com/nops-io/terraform-oci-nops-integration/releases/download/v1.0.0/nops-oci-integration-stack.zip)
+[![Deploy to Oracle Cloud](https://oci-resourcemanager-plugin.plugins.oci.oraclecloud.com/latest/deploy-to-oracle-cloud.svg)](https://cloud.oracle.com/resourcemanager/stacks/create?zipUrl=https://github.com/nops-io/terraform-oci-nops-integration/releases/download/v1.0.2/nops-oci-integration-stack.zip)
 
 ## Module Structure
 
@@ -28,24 +28,28 @@ The stack creates these resources, all in the root compartment and all through t
 
 | Resource | Default name | Purpose |
 |----------|--------------|---------|
-| `oci_identity_user` | `nops-cost-reports` | The identity nOps signs in as |
+| `oci_identity_user` | `nops-cost-reports-<suffix>` | The identity nOps signs in as |
 | `oci_identity_api_key` | - | The nOps public key, uploaded to that user |
 | `oci_identity_user_capabilities_management` | - | Allows API keys and turns off every other credential type the provider can manage |
-| `oci_identity_group` | `nops-cost-reports-reader` | The group the policy grants to |
+| `oci_identity_group` | `nops-cost-reports-reader-<suffix>` | The group the policy grants to |
 | `oci_identity_user_group_membership` | - | Adds the user to the group |
-| `oci_identity_policy` | `nops-cost-reports-policy` | The two statements below |
+| `oci_identity_policy` | `nops-cost-reports-policy-<suffix>` | The three statements below |
+
+`<suffix>` is 6 random hex characters, chosen once per stack (for example `nops-cost-reports-reader-3f9a1c`). Re-applying a stack keeps it; a new stack gets a new one, so it never clashes with resources an earlier stack left behind.
 
 **Policy statements (the only access granted):**
 
 ```
 define tenancy usage-report as ocid1.tenancy.oc1..aaaaaaaaned4fkpkisbwjlr56u7cj63lf3wffbilvqknstgtvzub7vhqkggq
-endorse group nops-cost-reports-reader to read objects in tenancy usage-report
+endorse group nops-cost-reports-reader-<suffix> to read objects in tenancy usage-report
+allow group nops-cost-reports-reader-<suffix> to inspect organizations-entity in tenancy
 ```
 
 ## Least Privilege
 
 - **Only cost reports.** Oracle writes each tenancy's cost reports into Oracle's own `usage-report` tenancy, in Object Storage namespace `bling`, in a bucket named after your tenancy OCID. The `define` statement names that tenancy, and the `endorse` statement lets the nOps group read objects there. These are the statements from Oracle's [Cost and Usage Reports](https://docs.oracle.com/en-us/iaas/Content/Billing/Concepts/costusagereportsoverview.htm) documentation.
-- **No access to your own resources.** No statement grants anything in your tenancy: nOps cannot list or read your compartments, Object Storage buckets, compute, networking, databases or IAM.
+- **Whether this is a child tenancy.** `inspect organizations-entity` covers one call, `ListOrganizations`: the organization this tenancy belongs to, its parent tenancy's name and its default subscription ID. Oracle writes an organization's cost reports only in the parent tenancy, so nOps uses it to warn when a child tenancy is connected. It cannot list the other tenancies, subscriptions or invitations, or change anything.
+- **No access to your own resources.** No other statement grants anything in your tenancy: nOps cannot list or read your compartments, Object Storage buckets, compute, networking, databases or IAM.
 - **Root compartment only because OCI requires it.** Cross-tenancy statements (`define`, `endorse`) are valid only in a policy attached to the root compartment.
 - **API keys only.** The user cannot sign in to the Console and cannot use auth tokens, customer secret keys or SMTP credentials. The OCI provider does not expose the DB credentials and OAuth 2.0 client credentials capabilities, so those keep OCI's defaults; they give no access on their own, because every OCI permission comes from a policy and the only policy naming this group is the one above.
 - **You hold the off switch.** Destroying the stack deletes the user and its API key, which ends nOps's access.
@@ -88,7 +92,7 @@ terraform apply
 terraform output -raw nops_connection_code
 ```
 
-The provider authenticates with the `DEFAULT` profile in `~/.oci/config`; set `config_file_profile` to use another profile. To call the stack from your own configuration, use `source = "git::https://github.com/nops-io/terraform-oci-nops-integration.git?ref=v1.0.0"`. The stack configures its own OCI providers, so call it without a `providers` argument, and without `count`, `for_each` or `depends_on`.
+The provider authenticates with the `DEFAULT` profile in `~/.oci/config`; set `config_file_profile` to use another profile. To call the stack from your own configuration, use `source = "git::https://github.com/nops-io/terraform-oci-nops-integration.git?ref=v1.0.2"`. The stack configures its own OCI providers, so call it without a `providers` argument, and without `count`, `for_each` or `depends_on`.
 
 ### The connection code
 
@@ -110,9 +114,9 @@ It names the tenancy, the nOps user, the API key fingerprint and the home region
 | `compartment_ocid` | Filled in by Resource Manager. Not used | `string` | `null` | no |
 | `current_user_ocid` | Filled in by Resource Manager. Its email is the default for `user_email` | `string` | `null` | no |
 | `user_email` | Primary email for the nOps user. Unset, it is the email of the user running the stack (see [Identity Domains](#identity-domains)) | `string` | `null` | no |
-| `group_name` | Name of the IAM group | `string` | `"nops-cost-reports-reader"` | no |
-| `user_name` | Name of the IAM user | `string` | `"nops-cost-reports"` | no |
-| `policy_name` | Name of the root-compartment policy | `string` | `"nops-cost-reports-policy"` | no |
+| `group_name` | Name prefix of the IAM group | `string` | `"nops-cost-reports-reader"` | no |
+| `user_name` | Name prefix of the IAM user | `string` | `"nops-cost-reports"` | no |
+| `policy_name` | Name prefix of the root-compartment policy | `string` | `"nops-cost-reports-policy"` | no |
 | `config_file_profile` | Terraform CLI only: profile in `~/.oci/config`. Resource Manager ignores it | `string` | `null` | no |
 
 In Resource Manager only `nops_public_key` and `user_email` are shown; the other variables are hidden and keep their defaults.
@@ -197,7 +201,16 @@ These steps prove that the stack grants exactly what nOps needs. Run them in a t
      --name "<object name>" --region <home region> --profile NOPS_TEST
    ```
 
-7. **Check that nothing else is granted.** Both calls must fail with an authorization error:
+7. **Check the organization lookup:**
+
+   ```bash
+   oci organizations organization list --compartment-id <tenancy OCID> \
+     --region <home region> --profile NOPS_TEST
+   ```
+
+   Expect a list, empty if the tenancy is not in an organization. An organization whose `compartment-id` is another tenancy means this is a child tenancy: connect the parent instead.
+
+8. **Check that nothing else is granted.** Both calls must fail with an authorization error:
 
    ```bash
    oci os bucket list --compartment-id <tenancy OCID> --profile NOPS_TEST
@@ -206,7 +219,7 @@ These steps prove that the stack grants exactly what nOps needs. Run them in a t
 
    In the Console, the user's details page must show API keys as the only allowed credential.
 
-8. **Check for drift:** run a plan (a Resource Manager **Plan** job, or `terraform plan`). Expect no changes.
+9. **Check for drift:** run a plan (a Resource Manager **Plan** job, or `terraform plan`). Expect no changes.
 
 Oracle generates cost reports about every 6 hours, and they can lag by up to 24 hours, so a new tenancy may have none on its first day. Tenancies that are not metered get no cost reports at all. An empty listing in step 5 still proves access.
 
@@ -237,7 +250,11 @@ Copy the key from nOps again. It is one line that starts with `MII`; a full PEM 
 
 ### Error: "409-Conflict" or a name that already exists
 
-A user, group or policy with the same name already exists, usually from an earlier run of this stack. Destroy the earlier stack, or delete those resources, and apply again. With the Terraform CLI you can set `user_name`, `group_name` and `policy_name` instead.
+Every stack gets its own name suffix, so this only happens if you set `user_name`, `group_name` or `policy_name` to a name already in use. Choose another name.
+
+### I deleted a stack without destroying it
+
+**Delete stack** removes only Resource Manager's record. The user, its API key, the group and the policy stay in your tenancy and keep nOps's access. Delete them yourself: the policy under **Identity & Security > Policies** (root compartment), then the user and the group under **Identity & Security > Domains > Default**. Each is named with the same `<suffix>` (shown in the stack's outputs, if you still have them).
 
 ### Error: creating the user fails with an email error
 
@@ -245,7 +262,7 @@ The error reads `The primary email must be specified`. Your identity domain requ
 
 ### nOps reports that it cannot read the cost reports
 
-New API keys and policies can take a few minutes to apply; select **Verify** in nOps again after a few minutes. If it still fails, check that the stack's apply job succeeded and that the policy shows both statements.
+New API keys and policies can take a few minutes to apply; select **Verify** in nOps again after a few minutes. If it still fails, check that the stack's apply job succeeded and that the `nops-cost-reports-policy-<suffix>` policy has its `define` and `endorse` statements.
 
 ## Limitations
 

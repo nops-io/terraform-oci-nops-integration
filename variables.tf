@@ -66,35 +66,35 @@ variable "user_email" {
 }
 
 variable "group_name" {
-  description = "Name of the IAM group that the policy grants cost report access to."
+  description = "Name prefix of the IAM group that the policy grants cost report access to. The stack appends a random suffix, e.g. nops-cost-reports-reader-3f9a1c."
   type        = string
   default     = "nops-cost-reports-reader"
 
   validation {
-    condition     = can(regex("^[A-Za-z0-9._-]{1,100}$", var.group_name))
-    error_message = "The group_name value may contain only letters, digits, '.', '_' and '-' (at most 100 characters), so the policy can name it without quotes."
+    condition     = can(regex("^[A-Za-z0-9._-]{1,90}$", var.group_name))
+    error_message = "The group_name value may contain only letters, digits, '.', '_' and '-' (at most 90 characters, leaving room for the suffix), so the policy can name it without quotes."
   }
 }
 
 variable "user_name" {
-  description = "Name of the IAM user that nOps signs in as."
+  description = "Name prefix of the IAM user that nOps signs in as. The stack appends a random suffix."
   type        = string
   default     = "nops-cost-reports"
 
   validation {
-    condition     = can(regex("^[A-Za-z0-9._-]{1,100}$", var.user_name))
-    error_message = "The user_name value may contain only letters, digits, '.', '_' and '-' (at most 100 characters)."
+    condition     = can(regex("^[A-Za-z0-9._-]{1,90}$", var.user_name))
+    error_message = "The user_name value may contain only letters, digits, '.', '_' and '-' (at most 90 characters, leaving room for the suffix)."
   }
 }
 
 variable "policy_name" {
-  description = "Name of the root-compartment policy that grants cost report access."
+  description = "Name prefix of the root-compartment policy that grants cost report access. The stack appends a random suffix."
   type        = string
   default     = "nops-cost-reports-policy"
 
   validation {
-    condition     = can(regex("^[A-Za-z0-9._-]{1,100}$", var.policy_name))
-    error_message = "The policy_name value may contain only letters, digits, '.', '_' and '-' (at most 100 characters)."
+    condition     = can(regex("^[A-Za-z0-9._-]{1,90}$", var.policy_name))
+    error_message = "The policy_name value may contain only letters, digits, '.', '_' and '-' (at most 90 characters, leaving room for the suffix)."
   }
 }
 

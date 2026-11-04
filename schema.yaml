@@ -1,5 +1,5 @@
 title: "Connect Oracle Cloud to nOps"
-description: "Creates a user, a group and a root-compartment policy that let nOps read this tenancy's Oracle cost reports, and nothing else."
+description: "Creates a user, a group and a root-compartment policy that let nOps read this tenancy's Oracle cost reports and see which Oracle organization it belongs to, and nothing else."
 informationalText: "When the apply job succeeds, copy the nOps connection code below and paste it into nOps to finish connecting."
 schemaVersion: 1.1.0
 version: "20261103"

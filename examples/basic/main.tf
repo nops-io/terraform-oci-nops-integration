@@ -13,7 +13,7 @@ terraform {
 # the tenancy's home region), so call it without a providers argument.
 # Credentials come from ~/.oci/config.
 module "nops_oci_integration" {
-  source = "../.." # or "git::https://github.com/nops-io/terraform-oci-nops-integration.git?ref=v1.0.1"
+  source = "../.." # or "git::https://github.com/nops-io/terraform-oci-nops-integration.git?ref=v1.0.2"
 
   # Required
   tenancy_ocid    = var.tenancy_ocid    # Your tenancy OCID (ocid1.tenancy.oc1..)
