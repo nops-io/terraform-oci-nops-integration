@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.1] - 2026-11-03
+
+### Fixed
+
+- **Creating the nOps user no longer fails in identity domains** with `The primary email must be specified`. Identity domains require a primary email by default. When `user_email` is unset, the user now gets the email of the person running the stack (read from `current_user_ocid`).
+
+### Changed
+
+- **`user_email` is shown in Resource Manager** as an optional field, for a team mailbox or for administrators with no email in OCI.
+
 ## [1.0.0] - 2026-11-03
 
 ### Added

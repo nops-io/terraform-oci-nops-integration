@@ -29,7 +29,7 @@ variable "compartment_ocid" {
 }
 
 variable "current_user_ocid" {
-  description = "Filled in by Resource Manager. Not used."
+  description = "Filled in by Resource Manager. Its email is the nOps user's primary email when user_email is unset."
   type        = string
   default     = null
 }
@@ -55,7 +55,7 @@ variable "nops_public_key" {
 }
 
 variable "user_email" {
-  description = "Optional primary email for the nOps user. Leave unset unless your identity domain requires a primary email on every user; then use a mailbox your team owns."
+  description = "Optional primary email for the nOps user. Identity domains require one by default. Unset, it is the email of the user that runs the stack (current_user_ocid); set it to a mailbox your team owns to use another, or when running with the Terraform CLI."
   type        = string
   default     = null
 

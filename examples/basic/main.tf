@@ -13,7 +13,7 @@ terraform {
 # the tenancy's home region), so call it without a providers argument.
 # Credentials come from ~/.oci/config.
 module "nops_oci_integration" {
-  source = "../.." # or "git::https://github.com/nops-io/terraform-oci-nops-integration.git?ref=v1.0.0"
+  source = "../.." # or "git::https://github.com/nops-io/terraform-oci-nops-integration.git?ref=v1.0.1"
 
   # Required
   tenancy_ocid    = var.tenancy_ocid    # Your tenancy OCID (ocid1.tenancy.oc1..)
@@ -23,7 +23,7 @@ module "nops_oci_integration" {
   # Optional: profile in ~/.oci/config to authenticate with (default: DEFAULT)
   config_file_profile = var.config_file_profile
 
-  # Optional: only if your identity domain requires a primary email on every user
+  # Identity domains require a primary email on every user; use a mailbox your team owns
   # user_email = "cloud-team@example.com"
 }
 

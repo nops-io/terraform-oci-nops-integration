@@ -13,7 +13,21 @@ locals {
     ["-----END PUBLIC KEY-----"]
   ))
 
-  user_email = var.user_email == "" ? null : var.user_email
+  # Identity domains require a primary email by default and accept duplicates,
+  # so an unset user_email falls back to the deploying administrator's email.
+  configured_email = var.user_email == null ? "" : var.user_email
+  deployer_email   = try(coalesce(data.oci_identity_user.deployer[0].email, ""), "")
+  user_email = (
+    local.configured_email != "" ? local.configured_email :
+    local.deployer_email != "" ? local.deployer_email :
+    null
+  )
+}
+
+data "oci_identity_user" "deployer" {
+  count    = var.current_user_ocid == null || var.current_user_ocid == "" ? 0 : 1
+  provider = oci.home
+  user_id  = var.current_user_ocid
 }
 
 resource "oci_identity_group" "nops" {

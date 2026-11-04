@@ -108,14 +108,14 @@ It names the tenancy, the nOps user, the API key fingerprint and the home region
 | `tenancy_ocid` | OCID of the tenancy to connect (`ocid1.tenancy.oc1..`). Resource Manager fills it in | `string` | - | yes |
 | `region` | Region the stack runs in. Resource Manager fills it in. IAM resources always go to the home region | `string` | - | yes |
 | `compartment_ocid` | Filled in by Resource Manager. Not used | `string` | `null` | no |
-| `current_user_ocid` | Filled in by Resource Manager. Not used | `string` | `null` | no |
-| `user_email` | Primary email for the nOps user. Set it only if your identity domain requires one (see [Identity Domains](#identity-domains)) | `string` | `null` | no |
+| `current_user_ocid` | Filled in by Resource Manager. Its email is the default for `user_email` | `string` | `null` | no |
+| `user_email` | Primary email for the nOps user. Unset, it is the email of the user running the stack (see [Identity Domains](#identity-domains)) | `string` | `null` | no |
 | `group_name` | Name of the IAM group | `string` | `"nops-cost-reports-reader"` | no |
 | `user_name` | Name of the IAM user | `string` | `"nops-cost-reports"` | no |
 | `policy_name` | Name of the root-compartment policy | `string` | `"nops-cost-reports-policy"` | no |
 | `config_file_profile` | Terraform CLI only: profile in `~/.oci/config`. Resource Manager ignores it | `string` | `null` | no |
 
-In Resource Manager only `nops_public_key` is shown; the other variables are hidden and keep their defaults.
+In Resource Manager only `nops_public_key` and `user_email` are shown; the other variables are hidden and keep their defaults.
 
 ## Outputs
 
@@ -131,11 +131,11 @@ In Resource Manager only `nops_public_key` is shown; the other variables are hid
 
 Newer tenancies use IAM identity domains. The stack creates the user and group in the Default domain through the IAM API (`oci_identity_user`, `oci_identity_group`), and the policy refers to the group by name, which OCI resolves in the Default domain.
 
-Some identity domains require a primary email on every user. In those, creating the user can fail with an email error. If that happens:
-- With the Terraform CLI, set `user_email` to a mailbox your team owns. Setting an email can make the domain send that mailbox a welcome message; the user still cannot sign in to the Console.
-- In Resource Manager, `user_email` is hidden in this version. Contact nOps Support.
+Identity domains require a primary email on every user by default (the domain setting **Primary email address required**), and creating a user without one fails with `The primary email must be specified`. Duplicate emails are accepted, so:
+- In Resource Manager, leave **Email for the nOps user** blank to use the email of the person running the stack (`current_user_ocid`), or enter a mailbox your team owns.
+- With the Terraform CLI, `current_user_ocid` is usually unset, so set `user_email`.
 
-This behavior must be verified in a test tenancy that uses identity domains. If `oci_identity_user` cannot create the user there, the fallback is to create it with [`oci_identity_domains_user`](https://registry.terraform.io/providers/oracle/oci/latest/docs/resources/identity_domains_user) as a service user, again with only API keys allowed.
+Setting an email can make the domain send that mailbox a welcome message; the nOps user still cannot sign in to the Console. If the person running the stack is federated and has no email in OCI, enter one.
 
 ## Verifying in a Test Tenancy
 
@@ -241,7 +241,7 @@ A user, group or policy with the same name already exists, usually from an earli
 
 ### Error: creating the user fails with an email error
 
-Your identity domain requires a primary email. See [Identity Domains](#identity-domains).
+The error reads `The primary email must be specified`. Your identity domain requires a primary email and the stack could not find yours. Enter **Email for the nOps user** and apply again. See [Identity Domains](#identity-domains).
 
 ### nOps reports that it cannot read the cost reports
 

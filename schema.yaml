@@ -10,6 +10,7 @@ variableGroups:
     visible: true
     variables:
       - nops_public_key
+      - user_email
 
   - title: "Hidden"
     visible: false
@@ -18,7 +19,6 @@ variableGroups:
       - region
       - compartment_ocid
       - current_user_ocid
-      - user_email
       - group_name
       - user_name
       - policy_name
@@ -30,6 +30,12 @@ variables:
     title: "nOps public key"
     description: "Paste the public key that nOps shows on the Deploy step. It is one line that starts with MII."
     required: true
+
+  user_email:
+    type: string
+    title: "Email for the nOps user (optional)"
+    description: "Oracle requires an email on every user. Leave blank to use your own. Oracle may send it a welcome message; the nOps user still cannot sign in to the Console."
+    required: false
 
 outputs:
   nops_connection_code:
